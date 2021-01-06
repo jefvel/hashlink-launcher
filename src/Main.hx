@@ -40,13 +40,16 @@ class Main extends hxd.App {
 	// The local game file will be called this
     static final gameFile = "game.dat";
 
-    // Launcher package
+    // Launcher package. If you only want to update the game files,
+    // set this to null.
     static final launcherPackage = "launcher-data";
     // Launcher file
     static final launcherFile = "hlboot.dat";
 
-	// set this to either "hl", or "./hl" or "./yourgame" or whatever you named the hashlink executable
-	static var hashlinkExecutable = "hl";
+    // set this to either "hl", or "./hl" or "./yourgame" 
+    // or whatever you named the hashlink executable
+    // leaving it as null will automatically set it
+	static var hashlinkExecutable:String = null;
 
 	// Local manifest info file
     static final manifestFile = "manifest.json";
@@ -75,7 +78,9 @@ class Main extends hxd.App {
 
 		bg = new Bitmap(hxd.Res.bg.toTile(), s2d);
 
-		hashlinkExecutable = Sys.executablePath();
+        if (hashlinkExecutable == null) {
+            hashlinkExecutable = Sys.executablePath();
+        }
 
 		infoText = new Text(DefaultFont.get(), s2d);
 		infoText.textColor = 0xFFFFFF;
@@ -253,33 +258,35 @@ class Main extends hxd.App {
             var m:Manifest = {};
 
             #if !debug
-            function launcherInfoMessages(l:UpdateStatus) {
-                log(switch(l) {
-                    case FetchError: "Couldn't get launcher info";
-                    case UpToDate: "Launcher is up to date";
-                    case Downloading: "Downloading new launcher";
-                    case Downloaded: "Launcher downloaded";
-                });
-            }
+            if (launcherPackage != null) {
+                function launcherInfoMessages(l:UpdateStatus) {
+                    log(switch(l) {
+                        case FetchError: "Couldn't get launcher info";
+                        case UpToDate: "Launcher is up to date";
+                        case Downloading: "Downloading new launcher";
+                        case Downloaded: "Launcher downloaded";
+                    });
+                }
 
-            var launcherInfo = updater.checkDataFile(launcherPackage, launcherFile, localManifest.launcher.version, launcherInfoMessages);
-            if (m == null) {
-                return;
-            }
+                var launcherInfo = updater.checkDataFile(launcherPackage, launcherFile, localManifest.launcher.version, launcherInfoMessages);
+                if (m == null) {
+                    return;
+                }
 
-            m.launcher = {
-                version: launcherInfo.name,
-                created: launcherInfo.created,
-            }
+                m.launcher = {
+                    version: launcherInfo.name,
+                    created: launcherInfo.created,
+                }
 
-            // Launcher was updated, restart it
-            if (localManifest.launcher.version != m.launcher.version) {
-                log("Launcher updated. Restarting...");
-                mainThread.sendMessage({
-                    type: "restartLauncher",
-                    data: m,
-                });
-                return;
+                // Launcher was updated, restart it
+                if (localManifest.launcher.version != m.launcher.version) {
+                    log("Launcher updated. Restarting...");
+                    mainThread.sendMessage({
+                        type: "restartLauncher",
+                        data: m,
+                    });
+                    return;
+                }
             }
             #end
 
