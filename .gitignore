@@ -3,3 +3,5 @@ game.dat
 manifest.json
 .tmp
 *.sav
+
+*.zip

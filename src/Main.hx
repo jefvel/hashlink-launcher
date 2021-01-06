@@ -88,7 +88,7 @@ class Main extends hxd.App {
 		mainThread = Thread.current();
 
         loadLocalManifest();
-		downloadFun();
+		checkForUpdates();
 
 		releaseDateText = new Text(DefaultFont.get(), s2d);
 		releaseDateText.textColor = 0xFFFFFF;
@@ -190,8 +190,12 @@ class Main extends hxd.App {
 				log(msg.data);
 			}
 			if (msg.type == "gameReady") {
-                gameReady = true;
-                saveManifest(msg.data);
+                if (msg.data != null) {
+                    saveManifest(msg.data);
+                    gameReady = true;
+                } else {
+                    checkOfflineFile();
+                }
             }
             if (msg.type == "restartLauncher") {
                 saveManifest(msg.data);
@@ -246,7 +250,7 @@ class Main extends hxd.App {
 		});
 	}
 
-	function downloadFun() {
+	function checkForUpdates() {
 		Thread.create(() -> {
 			function log(msg) {
 				mainThread.sendMessage({
@@ -261,7 +265,7 @@ class Main extends hxd.App {
             if (launcherPackage != null) {
                 function launcherInfoMessages(l:UpdateStatus) {
                     log(switch(l) {
-                        case FetchError: "Couldn't get launcher info";
+                        case FetchError: "Couldn't get launcher version";
                         case UpToDate: "Launcher is up to date";
                         case Downloading: "Downloading new launcher";
                         case Downloaded: "Launcher downloaded";
@@ -269,23 +273,21 @@ class Main extends hxd.App {
                 }
 
                 var launcherInfo = updater.checkDataFile(launcherPackage, launcherFile, localManifest.launcher.version, launcherInfoMessages);
-                if (m == null) {
-                    return;
-                }
+                if (launcherInfo != null) {
+                    m.launcher = {
+                        version: launcherInfo.name,
+                        created: launcherInfo.created,
+                    }
 
-                m.launcher = {
-                    version: launcherInfo.name,
-                    created: launcherInfo.created,
-                }
-
-                // Launcher was updated, restart it
-                if (localManifest.launcher.version != m.launcher.version) {
-                    log("Launcher updated. Restarting...");
-                    mainThread.sendMessage({
-                        type: "restartLauncher",
-                        data: m,
-                    });
-                    return;
+                    // Launcher was updated, restart it
+                    if (localManifest.launcher.version != m.launcher.version) {
+                        log("Launcher updated. Restarting...");
+                        mainThread.sendMessage({
+                            type: "restartLauncher",
+                            data: m,
+                        });
+                        return;
+                    }
                 }
             }
             #end
@@ -294,13 +296,14 @@ class Main extends hxd.App {
                 log(switch(l) {
                     case FetchError: "Couldn't get game version";
                     case UpToDate: "Game is up to date";
-                    case Downloading: "Downloading updates...";
+                    case Downloading: "Downloading game update...";
                     case Downloaded: "Updates downloaded";
                 });
             }
 
             var gameInfo = updater.checkDataFile(gamePackage, gameFile, localManifest.game.version, gameInfoMessages);
             if (gameInfo == null) {
+                sendGameReady(null);
                 return;
             }
 
@@ -313,7 +316,15 @@ class Main extends hxd.App {
 
 			sendGameReady(m);
 		});
-	}
+    }
+    
+    // If launcher update fails, check if
+    // existing game file exists and use it instead.
+    function checkOfflineFile() {
+        if (FileSystem.exists(gameFile)) {
+            gameReady = true;
+        }
+    }
 
 	function launchGame() {
 		if (!gameReady) {
