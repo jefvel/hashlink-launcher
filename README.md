@@ -10,7 +10,7 @@ I named my packages `data`, and `launcher-data`.
 Set the variables to correct values in the top of `src/Main.hx`.
 If you used the same package names, you only need to change `bintrayUser` and `bintrayRepo`.
 
-Then you can style it a bit however you want.
+Then you can style it to your needs.
 
 ## Deploying packages
 
