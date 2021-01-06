@@ -1,0 +1,14 @@
+-cp src
+
+-lib heaps
+-lib hlsdl
+
+-main Main
+
+-D windowFixed
+-D windowSize=720x430
+-D windowTitle=Karantän
+
+-D no-deprecation-warnings
+
+-hl hlboot.dat
